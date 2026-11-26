@@ -1,4 +1,4 @@
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, UPDATE_PRIORITY } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture, UPDATE_PRIORITY, VERSION } from 'pixi.js';
 
 const rows = 4;
 const poolSize = rows + 2;
@@ -179,7 +179,7 @@ export class PixiReels {
       const duration = fast ? 1200 : 2000 + index * 220;
       const steps = Math.round((duration - (accelerate + decelerate) / 2) * (fast ? .020 : .014));
       Object.assign(reel, {
-        duration, steps, stopped:false, position:0, velocity:0,
+        duration, steps, stopped:false, position:0, velocity:0, frameDistance:0,
         strip:prepareStrip(reel.source,reel.currentSymbols,result.grid[index],steps)
       });
       this.place(reel);
@@ -194,6 +194,8 @@ export class PixiReels {
     const spin = this.active;
     if (!spin) return;
     const dt = ticker.elapsedMS;
+    this.deltaMS = ticker.deltaMS;
+    this.rawFrameMS = dt;
     const samples = this.samples;
     samples.count++;
     samples.total += dt;
@@ -201,7 +203,7 @@ export class PixiReels {
     if (dt > 25) samples.dropped++;
     this.elapsed += dt;
     for (const [index,reel] of this.reels.entries()) {
-      if (reel.stopped) continue;
+      if (reel.stopped) { reel.frameDistance = 0; continue; }
       const end = reel.duration + spin.bounce;
       const target = reel.steps * this.pitch;
       const previous = reel.position;
@@ -216,6 +218,7 @@ export class PixiReels {
         reel.currentSymbols = spin.result.grid[index];
         spin.onReelStop?.(index);
       }
+      reel.frameDistance = spin.reduced && !reel.stopped ? 0 : reel.position - previous;
       reel.velocity = reel.stopped || !dt ? 0 : (reel.position - previous) * 1000 / dt;
       if (!spin.reduced || reel.stopped) this.place(reel);
     }
@@ -274,13 +277,20 @@ export class PixiReels {
 
   report() {
     const {count,total,max,dropped} = this.samples ?? {count:0,total:0,max:0,dropped:0};
-    return {
+    const stats = {
+      version:VERSION, deltaMS:this.deltaMS ?? 0, rawFrameMS:this.rawFrameMS ?? 0,
+      observedFPS:this.rawFrameMS ? 1000 / this.rawFrameMS : 0,
+      positions:this.reels.map(reel => reel.position),
+      frameDistance:this.reels.map(reel => reel.frameDistance ?? 0),
+      textureCount:Object.keys(this.textures).length,
+      textureSourceCount:1, devicePixelRatio:window.devicePixelRatio || 1,
       averageFPS:total ? 1000 * count / total : 0, averageFrameTime:count ? total / count : 0,
       maxFrameTime:max,droppedFrames:dropped,frameCount:count,
       resolution:[this.app.canvas.width,this.app.canvas.height],
       spriteCount:this.reels.length * (poolSize + rows),renderer:this.app.renderer.name,
       speed:this.reels.map(reel => reel.velocity ?? 0), gpu:this.gpu
     };
+    return stats;
   }
 
   dispose() {

@@ -1,30 +1,29 @@
 import { spin } from '/engine.mjs';
 import { shrine } from '/shrine.mjs';
 import { PixiReels } from '/reels.mjs';
-import { outfits, loadWardrobe, drawOutfits } from '/wardrobe.mjs';
-
-const wardrobeKey = 'neo-japan-wardrobe-v1';
-let savedWardrobe;
-try { savedWardrobe = localStorage.getItem(wardrobeKey); } catch {}
-const wardrobe = loadWardrobe(savedWardrobe);
-const avatarSrc = id => '/art/avatar-' + id + '.webp';
+import { createCharacterScreen } from '/character-screen.mjs';
 
 const app = document.querySelector('#app');
 const dialog = document.querySelector('#dialog');
 const format = new Intl.NumberFormat('ja-JP');
 const names = {fan:'扇', gem:'勾玉', drum:'太鼓', mask:'狐面', bell:'神楽鈴', gate:'鳥居', wild:'WILD'};
 const categories = [['SLOT','スロット','▥'], ['FISHING','フィッシング','◈'], ['HORSE RACING','競馬','♞']];
-const dock = [['ホーム','⌂'],['ミッション','◎'],['イベント','◇'],['ランキング','♜'],['フレンド','♧'],['ショップ','▱'],['マイページ','◉']];
+const dock = [['ホーム','⌂'],['ミッション','◎'],['イベント','◇'],['ランキング','♜'],['フレンド','♧'],['ショップ','▱'],['ガチャ','◇'],['キャラ','♙'],['マイページ','◉']];
 let coins = 3000, category = 0, betIndex = 0, state = 'IDLE', reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sound = false, volume = 0.5, audio, skip, view = 'lobby';
 const reelDebug = new URLSearchParams(location.search).has('reelDebug');
 let renderer, reelsReady = false;
 function updateReelDebug(metrics) {
-  renderer.debug.textContent = 'PixiJS · ' + metrics.renderer + ' · ' + metrics.averageFPS.toFixed(1) +
-    ' FPS · 平均 ' + metrics.averageFrameTime.toFixed(2) + ' ms · 最大 ' + metrics.maxFrameTime.toFixed(2) +
+  const values = list => list.map(value => value.toFixed(2)).join(' / ');
+  renderer.debug.textContent = 'PixiJS ' + metrics.version + ' · ' + metrics.renderer +
+    ' · FPS ' + metrics.observedFPS.toFixed(1) + ' / 平均 ' + metrics.averageFPS.toFixed(1) +
+    ' · 平均Δ ' + metrics.averageFrameTime.toFixed(2) + ' ms · 最大Δ ' + metrics.maxFrameTime.toFixed(2) +
     ' ms · 25 ms超 ' + metrics.droppedFrames + ' / ' + metrics.frameCount +
-    '\n' + metrics.spriteCount + ' Sprites · ' + metrics.resolution.join('×') +
-    ' · 速度 ' + metrics.speed.map(value => Math.round(value)).join(' / ') + ' px/s';
+    '\ndeltaMS ' + metrics.deltaMS.toFixed(2) + ' · elapsedMS ' + metrics.rawFrameMS.toFixed(2) +
+    ' · ' + metrics.spriteCount + ' Sprites · ' + metrics.textureCount + ' Textures / ' + metrics.textureSourceCount +
+    ' atlas · ' + metrics.resolution.join('×') + ' · DPR ' + metrics.devicePixelRatio +
+    '\n座標 px ' + values(metrics.positions) + '\n移動 px/frame ' + values(metrics.frameDistance) +
+    '\n速度 px/s ' + values(metrics.speed);
 }
 
 let speed = 'normal', autoRemaining = 0, autoRunning = false;
@@ -38,33 +37,16 @@ function modal(title, body) {
   if (!dialog.open) dialog.showModal();
 }
 
-function saveWardrobe() {
-  try { localStorage.setItem(wardrobeKey, JSON.stringify(wardrobe)); } catch {}
-  document.querySelectorAll('#app [data-avatar]').forEach(img => { img.src = avatarSrc(wardrobe.equipped); });
-}
-
-function showWardrobe(tab = 'closet', results = []) {
-  const isGacha = tab === 'gacha';
-  const visible = isGacha ? outfits.filter(outfit => outfit.weight) : outfits;
-  const equipped = outfits.find(outfit => outfit.id === wardrobe.equipped);
-  const cards = visible.map(outfit => {
-    const owned = wardrobe.owned.includes(outfit.id);
-    const active = outfit.id === wardrobe.equipped;
-    const action = isGacha ? '<small>提供割合 ' + outfit.weight + '%</small>'
-      : owned ? '<button data-equip="' + outfit.id + '"' + (active ? ' disabled' : '') + '>' + (active ? '着用中' : '着用する') + '</button>'
-      : '<small>未獲得</small>';
-    return '<article class="outfit-card"><img src="' + avatarSrc(outfit.id) + '" alt=""><strong>' + outfit.name + '</strong>' + action + '</article>';
-  }).join('');
-  modal('アバター', '<nav class="wardrobe-tabs"><button data-wardrobe-tab="closet" aria-pressed="' + !isGacha +
-    '">着せ替え</button><button data-wardrobe-tab="gacha" aria-pressed="' + isGacha + '">衣装ガチャ</button></nav>' +
-    '<div class="wardrobe-body"><div class="wardrobe-preview"><img src="' + avatarSrc(equipped.id) + '" alt="着用中のアバター"><small>' +
-    equipped.name + '</small></div><div class="wardrobe-content"><div class="outfit-cards">' + cards + '</div>' +
-    (isGacha ? '<div class="gacha-controls"><strong>試作用チケット ' + wardrobe.tickets + '枚</strong>' +
-    [1,10].map(count => '<button class="gold" data-draw="' + count + '"' + (wardrobe.tickets < count ? ' disabled' : '') + '>' + count + '回引く</button>').join('') +
-    '</div><p class="gacha-results" aria-live="polite">' + (results.length ? results.map(prize => prize.name + (prize.duplicate ? '（所持済み）' : '（獲得）')).join('、') : '同じ衣装が再度出る場合があります。') + '</p>' : '') +
-    '</div></div>');
-  dialog.className = 'wardrobe-dialog';
-}
+const characterScreen = createCharacterScreen({
+  dialog, modal,
+  settings:() => ({sound,volume,reduced}),
+  updateAvatar(character) {
+    document.querySelectorAll('#app [data-avatar]').forEach(img => {
+      img.src = img.closest('.avatar') ? character.iconImage : character.fullBodyImage;
+    });
+  }
+});
+const avatarSrc = () => characterScreen.selected().fullBodyImage;
 
 function settings() {
   modal('設定', '<label><input type="checkbox" id="reduced"' + (reduced ? ' checked' : '') + '> 演出を軽減</label><label><input type="checkbox" id="sound"' + (sound ? ' checked' : '') + '> サウンド</label><label>音量 <input id="volume" type="range" min="0" max="100" value="' + volume * 100 + '"></label>');
@@ -79,14 +61,14 @@ function lobby() {
     ? '<button class="poster featured" data-enter aria-label="電脳神社をプレイ"><img src="/art/neon-shrine-poster.webp" alt=""><span class="live-tag"><b></b> プレイ可能</span><span class="poster-copy"><small>CYBER SHRINE</small><strong>電脳神社</strong><span class="play-label">プレイ <b aria-hidden="true">›</b></span></span></button>' +
       Array.from({length: 4}, (_, index) => '<div class="poster locked p' + index + '"><span class="poster-copy"><strong>近日公開</strong></span></div>').join('')
     : '<div class="empty"><span>' + categories[category][2] + '</span><h2>' + categories[category][1] + '</h2><p>近日公開</p></div>';
-  app.innerHTML = '<div class="lobby"><header class="hud"><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div>ネオジャパンカジノタワー<small>NEO JAPAN CASINO TOWER</small></div></div><div class="hud-right"><button class="player" data-info="マイページ"><span class="avatar"><img data-avatar alt="" src="' + avatarSrc(wardrobe.equipped) + '"></span><span>RANK <b>1</b><meter min="0" max="100" value="0" aria-label="経験値"></meter></span></button>' + balance() + '<button class="gold square" data-refill aria-label="コイン補充">＋</button><button class="square" data-info="プレゼント" aria-label="プレゼント">♙</button><button class="square" data-settings aria-label="設定">⚙</button></div></header>' +
-    '<div class="lobby-body"><aside class="avatar-stage"><img data-avatar alt="プレイヤーアバター" src="' + avatarSrc(wardrobe.equipped) + '"><button data-wardrobe>着せ替え</button></aside><nav class="rail" aria-label="カテゴリー">' + categories.map(([en,jp,icon], index) => '<button data-category="' + index + '" aria-pressed="' + (category === index) + '"><span>' + icon + '</span><strong>' + en + '</strong><small>' + jp + '</small></button>').join('') + '</nav><section class="selection"><div class="section-heading"><h1>' + categories[category][1] + '</h1><span>' + categories[category][0] + '</span></div><div class="posters" tabindex="0" aria-label="ゲーム一覧">' + posters + '</div></section></div>' +
-    '<nav class="dock" aria-label="メニュー">' + dock.map(([label,icon], index) => '<button ' + (index ? (label === 'ショップ' ? 'data-wardrobe' : 'data-info="' + label + '"') : 'data-home aria-current="page"') + '><span>' + icon + '</span>' + label + '</button>').join('') + '</nav></div>';
+  app.innerHTML = '<div class="lobby"><header class="hud"><div class="brand"><span class="brand-mark" aria-hidden="true"></span><div>ネオジャパンカジノタワー<small>NEO JAPAN CASINO TOWER</small></div></div><div class="hud-right"><button class="player" data-info="マイページ"><span class="avatar"><img data-avatar alt="" src="' + avatarSrc() + '"></span><span>RANK <b>1</b><meter min="0" max="100" value="0" aria-label="経験値"></meter></span></button>' + balance() + '<button class="gold square" data-refill aria-label="コイン補充">＋</button><button class="square" data-info="プレゼント" aria-label="プレゼント">♙</button><button class="square" data-settings aria-label="設定">⚙</button></div></header>' +
+    '<div class="lobby-body"><aside class="avatar-stage"><img data-avatar alt="プレイヤーアバター" src="' + avatarSrc() + '"><button data-characters>キャラクター</button></aside><nav class="rail" aria-label="カテゴリー">' + categories.map(([en,jp,icon], index) => '<button data-category="' + index + '" aria-pressed="' + (category === index) + '"><span>' + icon + '</span><strong>' + en + '</strong><small>' + jp + '</small></button>').join('') + '</nav><section class="selection"><div class="section-heading"><h1>' + categories[category][1] + '</h1><span>' + categories[category][0] + '</span></div><div class="posters" tabindex="0" aria-label="ゲーム一覧">' + posters + '</div></section></div>' +
+    '<nav class="dock" aria-label="メニュー">' + dock.map(([label,icon], index) => '<button ' + (index ? (label === 'ガチャ' ? 'data-gacha' : label === 'キャラ' ? 'data-characters' : 'data-info="' + label + '"') : 'data-home aria-current="page"') + '><span' + (label === 'ガチャ' ? ' class="gacha-icon" aria-hidden="true"' : '') + '>' + icon + '</span>' + label + '</button>').join('') + '</nav></div>';
 }
 
 function game() {
   view = 'game';
-  app.innerHTML = '<div class="game"><header class="hud"><button data-home>‹ ロビー</button><div class="machine-title">電脳神社 <small>CYBER SHRINE</small></div><div class="hud-right">' + balance() + '<button data-refill class="gold square" aria-label="コイン補充">＋</button><button data-help class="square" aria-label="ヘルプ">ⓘ</button><button data-settings class="square" aria-label="設定">⚙</button></div></header><div class="stage"><img class="game-avatar" data-avatar alt="プレイヤーアバター" src="' + avatarSrc(wardrobe.equipped) + '"><div class="bonus-status" aria-live="polite"></div><div class="board"><div class="slot-reels" role="img" aria-label="5リール、4行"></div></div><div class="reach" hidden>リーチ！</div></div><footer class="controls"><button data-bet="-1" aria-label="ベット減少">−</button><div class="readout">TOTAL BET<strong id="bet"></strong></div><button data-bet="1" aria-label="ベット増加">＋</button><div class="readout result" id="result" aria-live="polite"></div><fieldset class="speed" aria-label="スピン速度"><button type="button" data-speed="normal">通常</button><button type="button" data-speed="fast">高速</button></fieldset><div class="spin-actions"><button class="auto-control" data-auto>自動回転</button><button class="gold spin" data-spin>SPIN</button></div></footer></div>';
+  app.innerHTML = '<div class="game"><header class="hud"><button data-home>‹ ロビー</button><div class="machine-title">電脳神社 <small>CYBER SHRINE</small></div><div class="hud-right">' + balance() + '<button data-refill class="gold square" aria-label="コイン補充">＋</button><button data-help class="square" aria-label="ヘルプ">ⓘ</button><button data-settings class="square" aria-label="設定">⚙</button></div></header><div class="stage"><img class="game-avatar" data-avatar alt="プレイヤーアバター" src="' + avatarSrc() + '"><div class="bonus-status" aria-live="polite"></div><div class="board"><div class="slot-reels" role="img" aria-label="5リール、4行"></div></div><div class="reach" hidden>リーチ！</div></div><footer class="controls"><button data-bet="-1" aria-label="ベット減少">−</button><div class="readout">TOTAL BET<strong id="bet"></strong></div><button data-bet="1" aria-label="ベット増加">＋</button><div class="readout result" id="result" aria-live="polite"></div><fieldset class="speed" aria-label="スピン速度"><button type="button" data-speed="normal">通常</button><button type="button" data-speed="fast">高速</button></fieldset><div class="spin-actions"><button class="auto-control" data-auto>自動回転</button><button class="gold spin" data-spin>SPIN</button></div></footer></div>';
   const slotReels = document.querySelector('.slot-reels');
   let debug;
   if (reelDebug) {
@@ -174,10 +156,16 @@ async function showWin(tier, payout) {
   state = 'WIN_ANIMATION';
   const stage = document.querySelector('.stage');
   const overlay = document.createElement('div');
+  const character = characterScreen.selected();
   overlay.className = 'win-overlay ' + tier.id;
   overlay.innerHTML = '<div class="win-sparks" aria-hidden="true"></div><div class="win-panel">' +
     '<div class="win-gate" aria-hidden="true"></div><div class="win-title">' + tier.id.toUpperCase() +
     ' WIN</div><strong class="win-value"></strong><button data-skip>スキップ</button></div>';
+  const cutIn = document.createElement('img');
+  cutIn.className = 'character-win-portrait ' + character.rarity;
+  cutIn.src = character.cutInImage;
+  cutIn.alt = '';
+  overlay.prepend(cutIn);
   const particles = overlay.querySelector('.win-sparks');
   for (let index = 0; index < tier.particles; index++) {
     const particle = document.createElement('i');
@@ -355,24 +343,22 @@ document.addEventListener('click', event => {
   const button = event.target.closest('button');
   if (!button) return;
   const data = button.dataset;
-  if ('wardrobe' in data) showWardrobe();
-  if ('wardrobeTab' in data) showWardrobe(data.wardrobeTab);
-  if ('equip' in data && wardrobe.owned.includes(data.equip)) {
-    wardrobe.equipped = data.equip;
-    saveWardrobe();
-    showWardrobe();
-  }
-  if ('draw' in data) {
-    const results = drawOutfits(wardrobe, Number(data.draw));
-    saveWardrobe();
-    showWardrobe('gacha', results);
-  }
+  if ('characters' in data) characterScreen.openCollection();
+  if ('gacha' in data) characterScreen.openGacha();
   if ('skip' in data) skip?.();
   if ('close' in data) dialog.close();
   if ('settings' in data) settings();
   if ('section' in data) help(data.section);
   if ('help' in data) help();
-  if ('info' in data) modal(data.info, data.info === 'マイページ' ? '<p>RANK 1 · 所持コイン ' + format.format(coins) + '</p>' : '<p>近日公開</p>');
+  if ('info' in data) {
+    const character = characterScreen.selected();
+    const profileViews = ['マイページ','ランキング','フレンド'];
+    modal(data.info, profileViews.includes(data.info)
+      ? '<div class="profile-character '+character.rarity+'"><img src="'+character.portraitImage+'" alt=""><div><strong>'+character.name+
+        '</strong><p>RANK 1 · 所持コイン '+format.format(coins)+'</p>'+
+        (data.info === 'マイページ' ? '<button data-characters>キャラクター</button>' : '<p>近日公開</p>')+'</div></div>'
+      : '<p>近日公開</p>');
+  }
   if ('refill' in data && state === 'IDLE') {
     coins += 1000;
     sync();

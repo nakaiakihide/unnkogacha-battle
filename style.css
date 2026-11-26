@@ -384,10 +384,10 @@ body:has(.lobby) .lobby{background:none}
   background:radial-gradient(ellipse at 50% 35%,#a66fd5bd,#371b55e8 70%);
   box-shadow:inset 0 0 18px #fff0c855,0 0 15px #a761d999;
 }
-.avatar-stage img,.game-avatar,.wardrobe-preview img,.outfit-card img{
+.avatar-stage img,.game-avatar{
   display:block;width:100%;height:100%;min-height:0;object-fit:contain;
 }
-.avatar-stage button,.wardrobe-tabs button[aria-pressed=true]{
+.avatar-stage button{
   color:#fff6ce;background:var(--tower-pink);border-color:var(--tower-gold);
 }
 .avatar-stage button{min-height:32px;width:min(100%,9em);font-size:clamp(10px,2.4vh,17px);font-weight:800}
@@ -427,24 +427,6 @@ body:has(.lobby) .lobby{background:none}
 .game .spin{color:#fff1bf;background:var(--tower-pink);text-shadow:0 1px #6b1b55;border-color:var(--tower-gold)}
 .game .stage .bonus-status{justify-self:center}
 .bonus-mode .stage{background:linear-gradient(90deg,#461259aa,#5e236255),url('/art/shrine.webp') right 32%/auto 150% no-repeat}
-.wardrobe-dialog{
-  width:min(94vw,900px);max-width:94vw;max-height:87dvh;
-  background:var(--tower-panel);border-color:var(--tower-gold);
-}
-.wardrobe-tabs,.gacha-controls{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-block:6px}
-.wardrobe-tabs button,.outfit-card button{padding:.3em .65em}
-.wardrobe-body{display:grid;grid-template-columns:minmax(66px,24%) minmax(0,1fr);gap:8px}
-.wardrobe-preview,.outfit-card{
-  min-width:0;text-align:center;
-  border:1px solid #d7aa64;border-radius:8px;background:radial-gradient(ellipse,#925fba,#38204f);
-}
-.wardrobe-preview{display:grid;grid-template-rows:minmax(0,1fr) auto;padding:4px}
-.wardrobe-preview img{max-height:45dvh}
-.outfit-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:5px}
-.outfit-card{display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:3px;justify-items:center;padding:4px;font-size:clamp(9px,1.75vw,14px)}
-.outfit-card img{height:clamp(64px,31dvh,205px)}
-.gacha-controls,.gacha-results{font-size:clamp(10px,1.7vw,14px)}
-.gacha-results{margin:3px 0}
 @media (orientation:landscape) and (max-height:500px){
   .lobby .lobby-body{
     grid-template-columns:clamp(76px,20%,160px) minmax(0,1fr);
@@ -468,19 +450,17 @@ body:has(.lobby) .lobby{background:none}
   .game .spin-actions{margin-inline-start:auto}
   .game .spin{min-width:90px}
   .game .controls .result{min-width:0;overflow-wrap:anywhere}
-  dialog,.wardrobe-dialog{
+  dialog{
     margin:auto;
     max-width:min(90vw,calc(100vw - 2 * max(var(--safe-left),var(--safe-right)) - 12px));
     max-height:min(87dvh,calc(100dvh - 2 * max(var(--safe-top),var(--safe-bottom)) - 8px));
   }
-  .wardrobe-dialog{padding:6px 10px}
 }
 @media (orientation:landscape) and (max-height:340px){
   .lobby,.game{grid-template-rows:39px minmax(0,1fr) 42px}
   .lobby .lobby-body{grid-template-rows:33px minmax(0,1fr)}
   .lobby .rail button,.avatar-stage button{min-height:28px}
   .game .controls>button,.game .controls .spin,.game .controls .auto-control,.game .controls .speed button{height:35px}
-  .wardrobe-preview img,.outfit-card img{max-height:27dvh}
 }
 
 /* Polished enamel controls and double-beveled frames from the concept. */
@@ -590,3 +570,69 @@ body:has(.game){background:#291342 url('/art/neon-shrine.webp') center/cover}
 .reel-debug{position:absolute;z-index:3;inset:auto 8px 6px 8px;margin:0;padding:4px;background:#160b26e8;color:#fff1c7;font:clamp(7px,1.2vw,12px)/1.18 monospace;pointer-events:none;overflow:hidden}
 .slot-reels{position:relative;width:100%;height:100%;min-height:0;overflow:hidden}
 .slot-reels canvas{position:absolute;inset:0;display:block}
+
+.character-dialog{
+  width:min(94vw,900px);max-width:min(94vw,calc(100vw - 2 * max(var(--safe-left),var(--safe-right)) - 12px));
+  max-height:min(88dvh,calc(100dvh - 2 * max(var(--safe-top),var(--safe-bottom)) - 8px));
+  padding:8px 12px;color:#fff4d1;overflow:auto;
+  background:radial-gradient(ellipse at 70% 12%,#562c85,#220e42 65%);border:1px solid #edc270;
+}
+.character-dialog h2,.character-dialog h3,.character-dialog h4,.character-dialog p{margin:.3em 0}
+.character-dialog button{padding:.32em .62em}
+.character-top,.gacha-footer,.collection-controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;font-size:clamp(10px,1.65vw,14px)}
+.character-top span{margin-inline-start:auto}
+.character-dialog select,.character-dialog input{font:inherit;border:1px solid #9271aa;background:#281944;color:#fff4db;border-radius:4px;padding:.36em}
+.collection-controls input{width:min(34vw,210px)}
+.gacha-layout{display:grid;grid-template-columns:minmax(96px,24%) minmax(0,1fr);gap:8px}
+.gacha-banners{display:grid;align-content:start;gap:5px;font-size:clamp(10px,1.8vw,15px)}
+.gacha-feature,.character-detail{
+  display:grid;grid-template-columns:minmax(70px,42%) minmax(0,1fr);align-items:center;gap:8px;padding:6px;
+  background:radial-gradient(ellipse at 25% 50%,color-mix(in srgb,var(--rarity,#b581ff),transparent 57%),transparent 72%),#2a164e;
+  border:1px solid var(--rarity,#deb772);border-radius:8px;
+}
+.gacha-feature img,.character-detail img{width:100%;height:clamp(100px,43dvh,330px);object-fit:contain}
+.gacha-feature h3,.character-detail h3{font-size:clamp(17px,4vh,32px)}
+.gacha-feature p,.character-detail p{font-size:clamp(10px,2.9vh,15px)}
+.gacha-feature small{display:block;margin-bottom:4px}
+.gacha-footer button.gold{min-height:33px}
+.prototype-label{display:block;font-size:10px;color:#efd6b2}
+.character-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.character-grid.ten-results{grid-template-columns:repeat(5,minmax(0,1fr))}
+.character-card{
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;justify-items:center;gap:2px;min-width:0;
+  border:1px solid var(--rarity,#cdb88e);background:radial-gradient(ellipse at 50% 35%,color-mix(in srgb,var(--rarity,#ac72ed),transparent 72%),#24153e);
+  font-size:clamp(8px,1.45vw,13px);overflow-wrap:anywhere;
+}
+.character-card.unowned img{filter:grayscale(1);opacity:.55}
+.character-card img{width:100%;height:clamp(55px,24dvh,150px);object-fit:contain}
+.ten-results .character-card img{height:clamp(42px,16dvh,120px)}
+.character-dialog .N,.profile-character.N,.character-win-portrait.N{--rarity:#cbd3e4}
+.character-dialog .R,.profile-character.R,.character-win-portrait.R{--rarity:#66b9ff}
+.character-dialog .SR,.profile-character.SR,.character-win-portrait.SR{--rarity:#c88aff}
+.character-dialog .SSR,.profile-character.SSR,.character-win-portrait.SSR{--rarity:#ffda76}
+.character-dialog .UR,.profile-character.UR,.character-win-portrait.UR{--rarity:#ffafec}
+.g-rarity{display:inline-block;color:var(--rarity);font-weight:900;font-size:clamp(10px,2.6vh,17px)}
+.g-rarity.UR{color:#ffc2ef;text-shadow:1px 0 #bff6ff,-1px 0 #d692ff}
+.new-item{color:#ffe28a;font-weight:800}
+.character-rates,.character-history{padding-inline-start:1.5em;font-size:clamp(11px,1.8vw,15px)}
+.character-rates li,.character-history li{padding:.25em}
+.character-rates b{margin-inline-start:10px}
+.summon-scene{
+  position:relative;display:grid;place-items:center;min-height:0;height:min(65dvh,400px);overflow:hidden;
+  background:radial-gradient(ellipse,#522178,#130927 72%);border:1px solid #c690ed;border-radius:8px;
+}
+.summon-scene canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.summon-scene img{z-index:1;height:84%;max-width:65%;object-fit:contain}
+.summon-scene strong{position:absolute;z-index:2;bottom:8px;color:#fff0b4;text-shadow:0 2px #1d102f}
+.summon-scene button{position:absolute;z-index:2;right:8px;top:8px}
+.profile-character{display:flex;align-items:center;gap:12px}
+.profile-character img{width:90px;height:120px;object-fit:contain;border:1px solid var(--rarity);border-radius:8px}
+.character-win-portrait{position:absolute;left:5%;bottom:3%;height:88%;max-width:28%;object-fit:contain;filter:drop-shadow(0 0 8px var(--rarity))}
+.dock .gacha-icon{color:#fbd58b;text-shadow:0 0 8px #f386ff,0 2px #461056}
+.dock .gacha-icon{position:relative;justify-self:center;width:1.55em;border:1px solid #d7a95b;border-radius:50% 50% 20% 20%;background:#6a2c8e}
+.character-card.UR{border-color:transparent;background:radial-gradient(ellipse at 50% 35%,#602578,#24153e) padding-box,linear-gradient(135deg,#d5b6ff,#9ff2ff,#ffe391,#ff9bdb) border-box}
+@media (orientation:landscape) and (max-height:420px){
+  .gacha-feature img{height:clamp(78px,35dvh,160px)}
+  .gacha-banners{font-size:clamp(9px,1.65vw,13px)}
+  .ten-results .character-card img{height:clamp(38px,14dvh,72px)}
+}
